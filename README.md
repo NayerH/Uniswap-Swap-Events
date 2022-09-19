@@ -28,4 +28,4 @@ This bot detects Swaps occuring on Uniswap V3
 
 The agent behaviour can be verified with the following transactions:
 
-- [0x5ada1b0ecf6f79e05bf28744f6928d625e18697658b5ab5e93b163e8c7c44f59](https://etherscan.io/tx/0x5ada1b0ecf6f79e05bf28744f6928d625e18697658b5ab5e93b163e8c7c44f59#eventlog)
+- [0xddac81d0a57f90708c85eb8041b5cd9f17f91ca1269741dffa911fdf6c816f9b](https://etherscan.io/tx/0xddac81d0a57f90708c85eb8041b5cd9f17f91ca1269741dffa911fdf6c816f9b#eventlog)

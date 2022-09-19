@@ -1,18 +1,15 @@
 import { FindingType, FindingSeverity, Finding, HandleTransaction, TransactionEvent } from "forta-agent";
 import { TestTransactionEvent } from "forta-agent-tools/lib/test";
 import { createAddress } from "forta-agent-tools";
-import { Interface } from "ethers/lib/utils";
-import { SWAP_EVENT, UNISWAP_FACTORY_ADDRESS, DEPLOYER_ADDRESS, RECEIVER_ADDRESS, UNISWAP_POOL_ABI, UNISWAP_FACTORY_ABI } from './constants';
-import { checkPoolAddress } from "./helper";
-import agent from "./agent";
+import { SWAP_EVENT, UNISWAP_POOL_INFORMATION } from './constants';
+import bot from "./agent";
 
 describe("Uniswap Swap Detection Bot", () => {
-  let handleTransaction: HandleTransaction = agent.handleTransaction;
-  // let functionABI = new Interface([BOT_CREATE_FUNCTION_SIGNATURE]).getFunction("createAgent");
+  let handleTransaction: HandleTransaction = bot.handleTransaction;
   let mockTxEvent : TransactionEvent;
 
   it("returns empty findings if transaction is not involved with a swap", async () => {
-    mockTxEvent = new TestTransactionEvent().setFrom(DEPLOYER_ADDRESS).setTo(RECEIVER_ADDRESS);
+    mockTxEvent = new TestTransactionEvent().setFrom(UNISWAP_POOL_INFORMATION.sender).setTo(UNISWAP_POOL_INFORMATION.poolAddress);
 
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toStrictEqual([]);
@@ -20,39 +17,43 @@ describe("Uniswap Swap Detection Bot", () => {
 
   it("returns empty findings if transaction involves a swap not related to a Uniswap pool", async () => {
     mockTxEvent = new TestTransactionEvent()
-      .setFrom(DEPLOYER_ADDRESS)
-      .setTo(RECEIVER_ADDRESS)
-      .addTraces({
-        function: functionABI,
-        to: PROXY_CONTRACT_ADDRESS,
-        arguments: [
-          123456,
-          createAddress("0xa47D88B172bbA7E1ad9a1799Dd068F70f9aB7E6A"),
-          "QmWRqhLG3xye6zuthLFS56aCoQHLE2Q6",
-          [137],
+      .setFrom(UNISWAP_POOL_INFORMATION.sender)
+      .setTo(createAddress("0xa47D88B172bbA7E1ad9a1799Dd068F70f9aB7E6A"))
+      .addEventLog(
+        SWAP_EVENT,
+        createAddress("0xa47D88B172bbA7E1ad9a1799Dd068F70f9aB7E6A"),
+        [
+          UNISWAP_POOL_INFORMATION.sender,
+          UNISWAP_POOL_INFORMATION.receiver,
+          "-6980258894621148086191",
+          "5316577313196438022",
+          "2183814749620062943734661703",
+          "385569747097993539145356",
+          "-71829",
         ]
-      });
-
+      );
 
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toStrictEqual([]);
   });
 
-  it("returns empty findings if non-swap transaction is related to a Uniswap pool", async () => {
+  it("returns empty findings if transaction involves a swap not related to a Uniswap V3 pool", async () => {
     mockTxEvent = new TestTransactionEvent()
-      .setFrom(DEPLOYER_ADDRESS)
-      .setTo(RECEIVER_ADDRESS)
-      .addTraces({
-        function: functionABI,
-        to: PROXY_CONTRACT_ADDRESS,
-        arguments: [
-          123456,
-          createAddress("0xa47D88B172bbA7E1ad9a1799Dd068F70f9aB7E6A"),
-          "QmWRqhLG3xye6zuthLFS56aCoQHLE2Q6",
-          [137],
+      .setFrom(UNISWAP_POOL_INFORMATION.sender)
+      .setTo(createAddress("0x65B9AD105B95290bcdE1Ed91F2f6688232ad5782"))
+      .addEventLog(
+        SWAP_EVENT,
+        createAddress("0x65B9AD105B95290bcdE1Ed91F2f6688232ad5782"),
+        [
+          UNISWAP_POOL_INFORMATION.sender,
+          UNISWAP_POOL_INFORMATION.receiver,
+          "-6980258894621148086191",
+          "5316577313196438022",
+          "2183814749620062943734661703",
+          "385569747097993539145356",
+          "-71829",
         ]
-      });
-
+      );
 
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toStrictEqual([]);
@@ -60,31 +61,39 @@ describe("Uniswap Swap Detection Bot", () => {
 
   it("returns non-empty findings if transaction involves a swap related to a Uniswap pool", async () => {
     mockTxEvent = new TestTransactionEvent()
-      .setFrom(NETHERMIND_DEPLOYER_ADDRESS)
-      .setTo(PROXY_CONTRACT_ADDRESS)
-      .addTraces({
-        function: functionABI,
-        to: PROXY_CONTRACT_ADDRESS,
-        arguments: [
-          123456,
-          NETHERMIND_DEPLOYER_ADDRESS,
-          "QmWRqhLG3xye6zuthLFS56aCoQHLE2Q6",
-          [137],
+      .setFrom(UNISWAP_POOL_INFORMATION.sender)
+      .setTo(UNISWAP_POOL_INFORMATION.poolAddress)
+      .addEventLog(
+        SWAP_EVENT,
+        UNISWAP_POOL_INFORMATION.poolAddress,
+        [
+          UNISWAP_POOL_INFORMATION.sender,
+          UNISWAP_POOL_INFORMATION.receiver,
+          "-6980258894621148086191",
+          "5316577313196438022",
+          "2183814749620062943734661703",
+          "385569747097993539145356",
+          "-71829",
         ]
-      });
-
+      );
 
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toStrictEqual([Finding.fromObject({
-      name: "Bot Deployment",
-      description: "A bot was deployed by Nethermind's Forta deployer address",
-      alertId: "BOT-1",
+      name: "Uniswap Swap",
+      description: "Swap made using Uniswap V3",
+      alertId: "UNISWAP-SWAP-1",
       severity: FindingSeverity.Info,
       type: FindingType.Info,
-      protocol: "polygon",
+      protocol: "ethereum",
       metadata: {
-        agentId : "123456",
-        metadata : "QmWRqhLG3xye6zuthLFS56aCoQHLE2Q6",
+        pool: UNISWAP_POOL_INFORMATION.poolAddress,
+        sender: UNISWAP_POOL_INFORMATION.sender,
+        recipient: UNISWAP_POOL_INFORMATION.receiver,
+        token0: UNISWAP_POOL_INFORMATION.token0.toString(),
+        token1: UNISWAP_POOL_INFORMATION.token1.toString(),
+        amount0: "-6980258894621148086191",
+        amount1: "5316577313196438022",
+        fee: UNISWAP_POOL_INFORMATION.fee.toString(),
       },
     })]);
   });
