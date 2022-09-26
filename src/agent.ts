@@ -6,8 +6,8 @@ import {
   FindingType,
 } from "forta-agent";
 import { createAddress } from "forta-agent-tools";
-import {SWAP_EVENT} from './constants';
-import {checkPoolAddress} from "./helper";
+import { SWAP_EVENT } from './constants';
+import { checkPoolAddress } from "./helper";
 
 export function provideTransactionHandler(swapEventSignature : string): HandleTransaction {
   return async (txEvent: TransactionEvent): Promise<Finding[]> => {

@@ -30,13 +30,11 @@ export async function checkPoolAddress(poolAddress : string) : Promise<Pool> {
     };
   }
 
-  const factoryContract = new ethers.Contract(UNISWAP_FACTORY_ADDRESS, UNISWAP_FACTORY_ABI, ethersProvider);
+  const factoryContract = new ethers.Contract(createAddress(UNISWAP_FACTORY_ADDRESS), UNISWAP_FACTORY_ABI, ethersProvider);
 
-  let validPoolRight : string;
-  let validPoolLeft : string;
+  let validPool : string;
   try {
-    validPoolRight = await factoryContract.getPool(token0, token1, fee);
-    validPoolLeft = await factoryContract.getPool(token1, token0, fee);
+    validPool = await factoryContract.getPool(token0, token1, fee);
   } catch (e) {
     return {
       token0: "",
@@ -46,6 +44,6 @@ export async function checkPoolAddress(poolAddress : string) : Promise<Pool> {
     };
   }
 
-  const isValid = (poolAddress === createAddress(validPoolLeft)) && (poolAddress === createAddress(validPoolRight));
+  const isValid = poolAddress === createAddress(validPool);
   return {token0, token1, fee, isValid};
 }
