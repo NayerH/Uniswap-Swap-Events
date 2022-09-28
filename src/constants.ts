@@ -8,4 +8,4 @@ export const UNISWAP_POOL_ABI : string[] = [
   "function token1() external view returns(address)"
 ];
 
-export const UNISWAP_FACTORY_ABI : string[] = ["function getPool(address arg1, address arg2, uint24 arg3) external view returns(address)"];
+export const INIT_CODE : string = "0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54";
