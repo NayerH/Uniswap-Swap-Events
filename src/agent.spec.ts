@@ -1,15 +1,7 @@
-import {
-  FindingType,
-  FindingSeverity,
-  Finding,
-  HandleTransaction,
-  TransactionEvent,
-  ethers,
-  getEthersProvider,
-} from "forta-agent";
-import { TestTransactionEvent } from "forta-agent-tools/lib/test";
+import { FindingType, FindingSeverity, Finding, HandleTransaction, TransactionEvent, ethers } from "forta-agent";
+import { TestTransactionEvent, MockEthersProvider } from "forta-agent-tools/lib/test";
 import { createAddress } from "forta-agent-tools";
-import { SWAP_EVENT } from "./constants";
+import { SWAP_EVENT, UNISWAP_POOL_ABI } from "./constants";
 import { provideTransactionHandler } from "./agent";
 
 describe("Uniswap Swap Detection Bot", () => {
@@ -37,13 +29,24 @@ describe("Uniswap Swap Detection Bot", () => {
     token1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
     fee: 3000,
   };
-  const MOCK_PROVIDER = getEthersProvider();
+  const POOL_INTERFACE: ethers.utils.Interface = new ethers.utils.Interface(UNISWAP_POOL_ABI);
 
   let handleTransaction: HandleTransaction;
   let mockTxEvent: TransactionEvent;
+  let mockProvider: MockEthersProvider;
+  let provider: ethers.providers.Provider;
 
-  beforeAll(() => {
-    handleTransaction = provideTransactionHandler(MOCK_PROVIDER, SWAP_EVENT);
+  const setUpMock = (poolAddress: string, token0: string, token1: string, fee: number) => {
+    mockProvider.addCallTo(poolAddress, 0, POOL_INTERFACE, "token0", { inputs: [], outputs: [token0] });
+    mockProvider.addCallTo(poolAddress, 0, POOL_INTERFACE, "token1", { inputs: [], outputs: [token1] });
+    mockProvider.addCallTo(poolAddress, 0, POOL_INTERFACE, "fee", { inputs: [], outputs: [fee] });
+    mockProvider.setLatestBlock(0);
+  };
+
+  beforeEach(() => {
+    mockProvider = new MockEthersProvider();
+    provider = mockProvider as unknown as ethers.providers.Provider;
+    handleTransaction = provideTransactionHandler(provider, SWAP_EVENT);
   });
 
   it("returns empty findings if transaction is not involved with a swap", async () => {
@@ -54,10 +57,11 @@ describe("Uniswap Swap Detection Bot", () => {
   });
 
   it("returns empty findings if transaction involves a swap not related to a Uniswap pool", async () => {
+    let testAddress: string = createAddress("0xa47D88B172bbA7E1ad9a1799Dd068F70f9aB7E6A");
     mockTxEvent = new TestTransactionEvent()
       .setFrom(UNISWAP_POOL_1.sender)
-      .setTo(createAddress("0xa47D88B172bbA7E1ad9a1799Dd068F70f9aB7E6A"))
-      .addEventLog(SWAP_EVENT, createAddress("0xa47D88B172bbA7E1ad9a1799Dd068F70f9aB7E6A"), [
+      .setTo(testAddress)
+      .addEventLog(SWAP_EVENT, testAddress, [
         UNISWAP_POOL_1.sender,
         UNISWAP_POOL_1.receiver,
         "-6980258894621148086191",
@@ -66,16 +70,19 @@ describe("Uniswap Swap Detection Bot", () => {
         "385569747097993539145356",
         "-71829",
       ]);
+
+    setUpMock(testAddress, UNISWAP_POOL_1.token0, UNISWAP_POOL_1.token1, UNISWAP_POOL_1.fee);
 
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toStrictEqual([]);
   });
 
   it("returns empty findings if transaction involves a swap not related to a Uniswap V3 pool", async () => {
+    let poolV2Address: string = createAddress("0x65B9AD105B95290bcdE1Ed91F2f6688232ad5782");
     mockTxEvent = new TestTransactionEvent()
       .setFrom(UNISWAP_POOL_1.sender)
-      .setTo(createAddress("0x65B9AD105B95290bcdE1Ed91F2f6688232ad5782"))
-      .addEventLog(SWAP_EVENT, createAddress("0x65B9AD105B95290bcdE1Ed91F2f6688232ad5782"), [
+      .setTo(poolV2Address)
+      .addEventLog(SWAP_EVENT, poolV2Address, [
         UNISWAP_POOL_1.sender,
         UNISWAP_POOL_1.receiver,
         "-6980258894621148086191",
@@ -84,6 +91,8 @@ describe("Uniswap Swap Detection Bot", () => {
         "385569747097993539145356",
         "-71829",
       ]);
+
+    setUpMock(poolV2Address, UNISWAP_POOL_1.token0, UNISWAP_POOL_1.token1, UNISWAP_POOL_1.fee);
 
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toStrictEqual([]);
@@ -101,7 +110,10 @@ describe("Uniswap Swap Detection Bot", () => {
         "2183814749620062943734661703",
         "385569747097993539145356",
         "-71829",
-      ]);
+      ])
+      .setBlock(0);
+
+    setUpMock(UNISWAP_POOL_1.poolAddress, UNISWAP_POOL_1.token0, UNISWAP_POOL_1.token1, UNISWAP_POOL_1.fee);
 
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toStrictEqual([
@@ -147,7 +159,11 @@ describe("Uniswap Swap Detection Bot", () => {
         "30253408291035598035977085895836424",
         "1919124489663096117",
         "257068",
-      ]);
+      ])
+      .setBlock(0);
+
+    setUpMock(UNISWAP_POOL_1.poolAddress, UNISWAP_POOL_1.token0, UNISWAP_POOL_1.token1, UNISWAP_POOL_1.fee);
+    setUpMock(UNISWAP_POOL_2.poolAddress, UNISWAP_POOL_2.token0, UNISWAP_POOL_2.token1, UNISWAP_POOL_2.fee);
 
     const findings = await handleTransaction(mockTxEvent);
     expect(findings).toStrictEqual([
