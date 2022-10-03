@@ -20,7 +20,7 @@ export function provideTransactionHandler(
     const swapEvents = txEvent.filterLog(swapEventSignature);
     for (const swapEvent of swapEvents) {
       const { sender, recipient, amount0, amount1 } = swapEvent.args;
-      const { token0, token1, fee, isValid } = await checkPoolAddress(provider, swapEvent.address);
+      const { token0, token1, fee, isValid } = await checkPoolAddress(provider, swapEvent.address, txEvent.blockNumber);
       if (isValid) {
         findings.push(
           Finding.fromObject({

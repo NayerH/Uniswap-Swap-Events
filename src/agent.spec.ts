@@ -30,23 +30,26 @@ describe("Uniswap Swap Detection Bot", () => {
     fee: 3000,
   };
   const POOL_INTERFACE: ethers.utils.Interface = new ethers.utils.Interface(UNISWAP_POOL_ABI);
+  const MOCK_PROVIDER: MockEthersProvider = new MockEthersProvider();
 
   let handleTransaction: HandleTransaction;
   let mockTxEvent: TransactionEvent;
-  let mockProvider: MockEthersProvider;
   let provider: ethers.providers.Provider;
 
   const setUpMock = (poolAddress: string, token0: string, token1: string, fee: number) => {
-    mockProvider.addCallTo(poolAddress, 0, POOL_INTERFACE, "token0", { inputs: [], outputs: [token0] });
-    mockProvider.addCallTo(poolAddress, 0, POOL_INTERFACE, "token1", { inputs: [], outputs: [token1] });
-    mockProvider.addCallTo(poolAddress, 0, POOL_INTERFACE, "fee", { inputs: [], outputs: [fee] });
-    mockProvider.setLatestBlock(0);
+    MOCK_PROVIDER.addCallTo(poolAddress, 0, POOL_INTERFACE, "token0", { inputs: [], outputs: [token0] });
+    MOCK_PROVIDER.addCallTo(poolAddress, 0, POOL_INTERFACE, "token1", { inputs: [], outputs: [token1] });
+    MOCK_PROVIDER.addCallTo(poolAddress, 0, POOL_INTERFACE, "fee", { inputs: [], outputs: [fee] });
+    MOCK_PROVIDER.setLatestBlock(0);
   };
 
-  beforeEach(() => {
-    mockProvider = new MockEthersProvider();
-    provider = mockProvider as unknown as ethers.providers.Provider;
+  beforeAll(() => {
+    provider = MOCK_PROVIDER as unknown as ethers.providers.Provider;
     handleTransaction = provideTransactionHandler(provider, SWAP_EVENT);
+  });
+
+  beforeEach(() => {
+    MOCK_PROVIDER.clear();
   });
 
   it("returns empty findings if transaction is not involved with a swap", async () => {

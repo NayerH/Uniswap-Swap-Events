@@ -12,7 +12,11 @@ type Pool = {
 
 let cache: LRUCache<string, string[]> = new LRUCache<string, string[]>({ max: 1500 });
 
-export async function checkPoolAddress(provider: ethers.providers.Provider, poolAddress: string): Promise<Pool> {
+export async function checkPoolAddress(
+  provider: ethers.providers.Provider,
+  poolAddress: string,
+  blockNumber: number
+): Promise<Pool> {
   const poolDetails = cache.get(poolAddress);
   if (poolDetails !== undefined) {
     return {
@@ -29,9 +33,9 @@ export async function checkPoolAddress(provider: ethers.providers.Provider, pool
   let token1: string;
   let fee: string;
   try {
-    token0 = await poolContract.token0();
-    token1 = await poolContract.token1();
-    fee = await poolContract.fee();
+    token0 = await poolContract.token0({ blockTag: blockNumber });
+    token1 = await poolContract.token1({ blockTag: blockNumber });
+    fee = await poolContract.fee({ blockTag: blockNumber });
   } catch (e) {
     return {
       token0: "",
